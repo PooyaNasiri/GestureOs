@@ -1,5 +1,7 @@
 # 🖐️ GestureOS: Touchless Gesture-Controlled Desktop
 
+![Alt text](/GestureOS.jpg)
+
 Welcome to **GestureOS**, a futuristic Python-based system that lets you control your Windows PC using nothing but your **hand gestures** via your webcam. Developed with passion by [Pooya Nasiri](https://github.com/pooyanasiri), this project combines computer vision, system control, and media automation in a single script.
 
 ---
