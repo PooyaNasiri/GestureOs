@@ -19,10 +19,17 @@ Welcome to **GestureOS**, a futuristic Python-based system that lets you control
 - 🎯 **Region-based cursor** — Mouse maps only inside a central 80% region of the screen
 
 ---
-
 ## 🧠 How It Works
 
-GestureOS uses **MediaPipe** to detect hand landmarks and classify gestures based on finger positions and joint angles. When a known gesture is recognized, it triggers corresponding actions using `pyautogui`, `win32api`, and Windows shell commands.
+GestureOS uses **MediaPipe** to detect hand landmarks and classify gestures based on finger positions and joint angles for both hands but a single hand at a time. When a known gesture is recognized, it triggers corresponding actions using `pyautogui`, `win32api`, and Windows shell commands.
+
+> ⚙️ **Configuration Notice:**  
+> The system includes a flag named `run_in_background` which controls whether the app runs with a visible UI.  
+> - If `run_in_background` is set to `True`, **no UI window will appear**, and gesture control will run silently.  
+> - ⚠️ **Warning:** In background mode, the only gesture to **safely close the app** is the **middle finger gesture**, or you must manually terminate the process via Task Manager.
+
+> 💬 **Want More Gestures or Custom Actions?**  
+> If you're looking to expand GestureOS with more gesture types, advanced system control, or app-specific shortcuts [**contact me**](#author).
 
 ---
 
@@ -82,9 +89,11 @@ You can map gestures to any `pyautogui`, `os.system`, or `win32gui` commands.
 
 ---
 
-## 👤 Author
+##  Author
+
 
 **Pooya Nasiri**  
+E-mail: [pooya.nasiri75@gmail.com](mailto:pooya.nasiri75@gmail.com)  
 GitHub: [@pooyanasiri](https://github.com/pooyanasiri)  
 LinkedIn: [Pooya Nasiri](https://www.linkedin.com/in/pooyanasiri/)
 
