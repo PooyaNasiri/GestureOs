@@ -2,3 +2,4 @@ opencv-python
 mediapipe
 pyautogui
 pywin32
+pywinauto
