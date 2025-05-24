@@ -69,8 +69,11 @@ Make sure your **webcam is enabled** and you have a **good lighting** condition.
 | Semi-Palm       | Switch Tabs (Alt+Tab)          |
 | Middle Finger🖕   | Exit Script                    |
 | Index Only ☝️     | Mouse Movement                 |
+| Thumbs up 👍     | Volume up                 |
+| Thumbs down 👎     | Volume down                 |
 | Pinch Thumb + Index | Right Click               |
 | Pinch Thumb + Middle | Left Click               |
+
 
 ---
 
