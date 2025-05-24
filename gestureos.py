@@ -1,15 +1,13 @@
 import ctypes
 import math
 import time
-
 import cv2
 import mediapipe as mp
-import pyautogui
+import win32com.client
 import win32api
-import win32com.client
-import win32com.client
 import win32con
 import win32gui
+import pyautogui
 from pywinauto import Desktop
 
 # Setup
@@ -18,6 +16,9 @@ screen_w, screen_h = pyautogui.size()
 run_in_background = False
 shell = win32com.client.Dispatch("Shell.Application")
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, screen_w)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, screen_h)
+cap.set(cv2.CAP_PROP_FPS, 60)
 
 bend_angle = 70
 unbend_angle = 150
@@ -25,8 +26,8 @@ delay = 1.0
 gesture_timers = {}
 
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.9,
-                       min_tracking_confidence=0.9)
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.8,
+                       min_tracking_confidence=0.8)
 mp_draw = mp.solutions.drawing_utils
 
 
@@ -61,7 +62,8 @@ class Functions:
 
     @staticmethod
     def leftclick():
-        pyautogui.click(button="left")
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+        # pyautogui.click(button="left")
 
     @staticmethod
     def rightclick():
@@ -115,13 +117,10 @@ class Functions:
 # Gesture detection loop
 while True:
     ret, frame = cap.read()
-    if not ret:
-        break
-
     frame = cv2.flip(frame, 1)
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = hands.process(rgb)
-    gesture_state = "Idle"
+    gesture_state = "No hand"
     function = None
 
     if result.multi_hand_landmarks:
@@ -129,7 +128,8 @@ while True:
             mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
             landmarks = hand_landmarks.landmark
             h, w, _ = frame.shape
-            distance = dist(landmarks[0], landmarks[4]) / 6.0
+            distance = dist(landmarks[0], landmarks[4]) / 9.0
+            gesture_state = "Idle"
 
             fingers = {
                 "Index": [5, 6, 8],
@@ -144,9 +144,10 @@ while True:
             }
 
             # Gesture definitions
-            y_values = [lm.y for lm in landmarks]
-            is_thumbs_up = landmarks[4].y <= min(y_values)
-            is_thumbs_down = landmarks[4].y >= max(y_values)
+            y_values = [lm.y for i, lm in enumerate(landmarks) if i != 4]
+            is_thumbs_up = landmarks[3].y <= min(y_values)
+            is_thumbs_down = landmarks[3].y >= max(y_values)
+
             is_thumb_close = (min(landmarks[8].x, landmarks[17].x)
                               <= landmarks[4].x <= max(landmarks[8].x, landmarks[17].x))
             is_palm = all(not bent for bent in bent_fingers.values())
@@ -164,14 +165,14 @@ while True:
 
             # Gesture-to-function map
             gesture_map = {
-                "ThumbsUp": (is_thumbs_up, Functions.volume_up),
-                "ThumbsDown": (is_thumbs_down, Functions.volume_down),
-                "Fuck": (is_fuck, Functions.exit),
-                "Semi Palm": (is_semi_palm, Functions.switchtab),
-                "Fist": (is_fist, Functions.showdesktop),
-                "SpiderMan": (is_spiderman, Functions.toggle_maximize),
-                "Peace": (is_peace, Functions.mute_toggle),
-                "Full Palm": (is_full_palm, Functions.playpause),
+                "Volume Up": (is_thumbs_up, Functions.volume_up),
+                "Volume Down": (is_thumbs_down, Functions.volume_down),
+                "Exit": (is_fuck, Functions.exit),
+                "Switch Tabs": (is_semi_palm, Functions.switchtab),
+                "Show Desktop": (is_fist, Functions.showdesktop),
+                "Maximize/Restore": (is_spiderman, Functions.toggle_maximize),
+                "Mute Toggle": (is_peace, Functions.mute_toggle),
+                "Play/Pause": (is_full_palm, Functions.playpause),
                 "Pinky": (is_pinky, None),
             }
 
@@ -183,16 +184,23 @@ while True:
                     break
 
             # Special case: Mouse Control
-            if is_index:
+            if is_index and function is None:
                 gesture_state = "Mouse Control"
                 roi_ratio = 0.8
                 roi_x, roi_y = (1 - roi_ratio) / 2, (1 - roi_ratio) / 2
                 ix, iy = landmarks[8].x, landmarks[8].y
 
+                # Overlay ROI box
+                roi_px1 = int(roi_x * w)
+                roi_py1 = int(roi_y * h)
+                roi_px2 = int((1 - roi_x) * w)
+                roi_py2 = int((1 - roi_y) * h)
+                cv2.rectangle(frame, (roi_px1, roi_py1), (roi_px2, roi_py2), (0, 255, 0), 1)
+
                 if roi_x <= ix <= 1 - roi_x and roi_y <= iy <= 1 - roi_y:
                     rel_x = (ix - roi_x) / roi_ratio
                     rel_y = (iy - roi_y) / roi_ratio
-                    pyautogui.moveTo(int(rel_x * screen_w), int(rel_y * screen_h))
+                    win32api.SetCursorPos((int(rel_x * screen_w), int(rel_y * screen_h)))
 
                 if dist(landmarks[4], landmarks[8]) < distance:
                     gesture_state = "Right Click!"
@@ -200,6 +208,10 @@ while True:
                 elif dist(landmarks[4], landmarks[6]) < distance:
                     gesture_state = "Left Click!"
                     function = Functions.leftclick
+                else:
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+            else:
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
 
             # Call function with cooldown
             if function:
@@ -210,8 +222,8 @@ while True:
                     function()
 
     if not run_in_background:
-        cv2.putText(frame, gesture_state, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (50, 200, 50), 2)
-        cv2.imshow("Hand Detection", frame)
+        cv2.putText(frame, gesture_state, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+        cv2.imshow("GestureOS", frame)
         if cv2.waitKey(1) == 27:
             break
 
