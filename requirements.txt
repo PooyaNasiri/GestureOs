@@ -3,3 +3,5 @@ mediapipe
 pyautogui
 pywin32
 pywinauto
+numpy
+pillow
