@@ -15,25 +15,6 @@ from pywinauto import Desktop
 
 
 ###############################################
-#                 UTILITIES                   #
-###############################################
-
-def calculate_angle(a, b, c):
-    ba = (a[0] - b[0], a[1] - b[1])
-    bc = (c[0] - b[0], c[1] - b[1])
-    dot = ba[0] * bc[0] + ba[1] * bc[1]
-    mag_ba = math.hypot(*ba)
-    mag_bc = math.hypot(*bc)
-    if mag_ba == 0 or mag_bc == 0:
-        return 0
-    cos_angle = max(-1, min(1, dot / (mag_ba * mag_bc)))
-    return math.degrees(math.acos(cos_angle))
-
-def dist(a, b):
-    return math.hypot(a.x - b.x, a.y - b.y)
-
-
-###############################################
 #               SYSTEM ACTIONS               #
 ###############################################
 
@@ -168,10 +149,57 @@ EMOJI_MAP = {
 
 
 ###############################################
+#           Windows Frame Settings            #
+###############################################
+
+def dist(a, b):
+    return math.hypot(a.x - b.x, a.y - b.y)
+
+
+def disable_maximize_button():
+    hwnd = win32gui.FindWindow(None, window_name)
+    style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+    style &= ~win32con.WS_MAXIMIZEBOX  # Disable maximize button
+    style &= ~win32con.WS_THICKFRAME  # Disable resizing
+    win32gui.SetWindowLong(hwnd, win32con.GWL_STYLE, style)
+    win32gui.SetWindowPos(hwnd, None, 0, 0, 0, 0,
+                          win32con.SWP_NOMOVE |
+                          win32con.SWP_NOSIZE |
+                          win32con.SWP_NOZORDER |
+                          win32con.SWP_FRAMECHANGED)
+
+
+def set_window_icon(icon_path):
+    hwnd = win32gui.FindWindow(None, window_name)
+    if hwnd == 0:
+        print(f"Window '{window_name}' not found.")
+        return
+
+    hicon = win32gui.LoadImage(
+        None,
+        icon_path,
+        win32con.IMAGE_ICON,
+        0, 0,
+        win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
+    )
+
+    if hicon == 0:
+        print("Failed to load icon.")
+        return
+
+    win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, hicon)
+    win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, hicon)
+
+
+###############################################
 #               MAIN GESTURE LOOP             #
 ###############################################
 
 def gesture_loop():
+    if not run_in_background:
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        disable_maximize_button()
+        set_window_icon("icon.ico")
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -287,12 +315,9 @@ def gesture_loop():
                     wx, wy = int(wrist.x * w), int(wrist.y * h)
                     draw_emoji(frame, EMOJI_MAP[gesture_state], wx + 20, wy - 20, size=48)
 
-        cv2.putText(frame, gesture_state, (10, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-
-        # Display state label
-        cv2.putText(frame, gesture_state, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-        cv2.imshow("GestureOS", frame)
+        if not run_in_background:
+            cv2.putText(frame, gesture_state, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            cv2.imshow(window_name, frame)
         if cv2.waitKey(1) == 27:
             break
 
@@ -305,10 +330,10 @@ def gesture_loop():
 ###############################################
 
 if __name__ == "__main__":
+    window_name = "GestureOS"
+    run_in_background = False
     pyautogui.FAILSAFE = False
     screen_w, screen_h = pyautogui.size()
-
-    run_in_background = False
     shell = win32com.client.Dispatch("Shell.Application")
 
     cap = cv2.VideoCapture(0)
